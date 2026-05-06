@@ -24,29 +24,40 @@ The complete infrastructure was provisioned on AWS EC2 instances using Terraform
 #Architecture Flow
 
 ```text
-Developer Pushes Code to GitHub
+Developer Writes Code on Local Machine
             ↓
-GitHub Webhook Triggers Jenkins
+Code Pushed to GitHub using Git
             ↓
-Jenkins Clones Latest Code
+Terraform Used to Provision AWS Infrastructure
             ↓
-Docker Image Build
+3 EC2 Instances Created:
+   - Jenkins Server
+   - Kubernetes Server
+   - Monitoring Server
             ↓
-Docker Image Push to DockerHub
+Bootstrap Scripts Install Required Tools
             ↓
-Jenkins SSH into Kubernetes Server
+GitHub Webhook Triggers Jenkins Pipeline
             ↓
-Kubernetes Deployment Updated
+Jenkins Clones Latest Application Code
+            ↓
+Docker Image Build Starts
+            ↓
+Docker Image Pushed to DockerHub
+            ↓
+Jenkins Connects to Kubernetes Server via SSH
+            ↓
+Kubernetes Deployment Image Updated
             ↓
 Rolling Update Creates New Pods
             ↓
-Application Updated Automatically
+Application Gets Updated Automatically
             ↓
-Prometheus Collects Metrics
+Prometheus Scrapes Infrastructure Metrics
             ↓
 Grafana Visualizes Monitoring Dashboards
             ↓
-Jenkins Sends Email Notifications
+Jenkins Sends Build Status Email Notifications
 ```
 
 ---
