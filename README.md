@@ -150,7 +150,7 @@ resource "aws_instance" "jenkins_server" {
 
 # AWS Infrastructure
 
-![AWS EC2 Instances](./screenshots/AWS EC2 instances.png)
+![AWS EC2 Instances](./screenshots/AWS-EC2-instances.png)
 
 ---
 
@@ -368,7 +368,7 @@ Prometheus scraped metrics from:
 
 ## Jenkins Server Monitoring
 
-![Grafana Jenkins Server](./screenshots/grafana-jenkins server.png)
+![Grafana Jenkins Server](./screenshots/grafana-jenkins-server.png)
 
 ---
 
