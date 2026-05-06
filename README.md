@@ -8,23 +8,24 @@
 
 This project demonstrates a complete end-to-end DevOps CI/CD pipeline built using open-source and cloud-native tools.
 
-The goal of this project was to automate:
+The project automates:
 
-* Infrastructure provisioning
-* Application build & deployment
-* Containerization
-* Kubernetes deployment
-* Monitoring & alerting
-* Continuous Integration & Continuous Deployment (CI/CD)
+- Infrastructure provisioning
+- Application containerization
+- CI/CD pipeline execution
+- Docker image management
+- Kubernetes deployment
+- Monitoring and visualization
+- Build notifications
 
 The complete infrastructure was provisioned on AWS EC2 instances using Terraform.
 
 ---
 
-#Architecture Flow
+# Complete Project Flow
 
 ```text
-Developer Writes Code on Local Machine
+Code on Local Machine
             ↓
 Code Pushed to GitHub using Git
             ↓
@@ -45,9 +46,11 @@ Docker Image Build Starts
             ↓
 Docker Image Pushed to DockerHub
             ↓
-Jenkins Connects to Kubernetes Server via SSH
+Jenkins Clones Kubernetes Manifest Repository
             ↓
-Kubernetes Deployment Image Updated
+Jenkins Updates Image Tag in deployment.yaml
+            ↓
+Updated Kubernetes Manifest Applied on K8s Server
             ↓
 Rolling Update Creates New Pods
             ↓
@@ -62,7 +65,14 @@ Jenkins Sends Build Status Email Notifications
 
 ---
 
-#Tech Stack Used
+# Architecture
+
+![Architecture](./screenshots/full-project-architecture.png)
+
+---
+
+# Tech Stack
+
 
 | Category                | Tools                 |
 | ----------------------- | --------------------- |
@@ -77,6 +87,7 @@ Jenkins Sends Build Status Email Notifications
 | Alerts                  | Gmail SMTP            |
 | Code Repository         | GitHub                |
 | Version Control         | Git                   |
+
 ---
 
 # Repository Structure
@@ -113,13 +124,15 @@ end-to-end-devops-project/
 
 ---
 
-#Infrastructure Provisioning using Terraform
+# Infrastructure Provisioning using Terraform
 
-Terraform was used to provision multiple EC2 instances:
+Terraform was used to provision multiple AWS EC2 instances.
 
-* Jenkins Server
-* Kubernetes Server
-* Monitoring Server
+Provisioned infrastructure:
+
+- Jenkins Server
+- Kubernetes Server
+- Monitoring Server
 
 ## Example Terraform Configuration
 
@@ -141,76 +154,58 @@ resource "aws_instance" "jenkins_server" {
 
 ---
 
-#AWS Infrastructure
+# AWS Infrastructure
 
-![AWS EC2 Instances](./screenshots/AWS%20EC2%20instances.png)
+![AWS EC2 Instances](./screenshots/aws-ec2-instances.png)
 
 ---
 
-#Automated Server Setup using install.sh
+# Automated Server Setup using install.sh
 
-Bootstrap scripts were used to automate server setup.
+Bootstrap scripts were used to automate package installation and server configuration.
 
 The scripts installed:
 
-* Java
-* Jenkins
-* Docker
-* NodeJS
-* Minikube
-* kubectl
-* Prometheus
-* Grafana
-* Node Exporter
+- Java
+- Jenkins
+- Docker
+- NodeJS
+- kubectl
+- Minikube
+- Prometheus
+- Grafana
+- Node Exporter
 
-This reduced manual setup effort and made infrastructure reproducible.
+This reduced manual setup effort and improved reproducibility.
 
 ---
 
 # Jenkins CI/CD Pipeline
 
-The Jenkins pipeline performs:
+The Jenkins pipeline performs the following operations:
 
 1. Clean Workspace
-2. Clone Latest Code
+2. Clone Application Repository
 3. Build Docker Image
 4. Push Docker Image to DockerHub
-5. Deploy Latest Image to Kubernetes
-6. Send Email Notifications
+5. Clone Kubernetes Manifest Repository
+6. Update Docker Image Tag in deployment.yaml
+7. Deploy Updated Manifest to Kubernetes
+8. Send Email Notifications
 
 ## Jenkins Pipeline Snippet
 
 ```groovy
-pipeline {
-    agent any
+stage('Update Deployment YAML') {
+    steps {
 
-    stages {
+        dir('k8s-manifests') {
 
-        stage('Clone Code') {
-            steps {
-                git branch: 'main', url: 'https://github.com/YOUR_GITHUB_USERNAME/YOUR_APP_REPO.git'
-            }
-        }
+            sh """
+            sed -i 's|image:.*|image: $IMAGE_NAME:$IMAGE_TAG|' deployment.yaml
+            """
 
-        stage('Build Docker Image') {
-            steps {
-                sh 'docker build -t $IMAGE_NAME:$IMAGE_TAG .'
-            }
-        }
-
-        stage('Push Docker Image') {
-            steps {
-                sh 'docker push $IMAGE_NAME:$IMAGE_TAG'
-            }
-        }
-
-        stage('Deploy to Kubernetes') {
-            steps {
-                sh '''
-                ssh -o StrictHostKeyChecking=no -i /var/lib/jenkins/my-key.pem ubuntu@K8S_SERVER_IP \
-                "kubectl set image deployment/devops-demo-deployment devops-demo-container=$IMAGE_NAME:$IMAGE_TAG"
-                '''
-            }
+            sh 'cat deployment.yaml'
         }
     }
 }
@@ -220,15 +215,15 @@ pipeline {
 
 # Jenkins Pipeline Success
 
-![Pipeline Success](./screenshots/pipeline_success.png)
+![Pipeline Success](./screenshots/pipeline-success.png)
 
 ---
 
-# Docker Image Build & Push
+# Docker Image Build and Push
 
 Docker was used to containerize the application.
 
-Each build generated a unique image tag using Jenkins build numbers.
+Each Jenkins build generated a unique Docker image tag using Jenkins build numbers.
 
 Example:
 
@@ -237,45 +232,51 @@ shikhardevops/devops-demo-app:5
 shikhardevops/devops-demo-app:6
 ```
 
-This helped maintain image version history and enabled rollback capability.
+This maintained image version history and enabled rollback capability.
 
 ---
 
 # DockerHub Images
 
-![DockerHub Images](./screenshots/dockerhub_pushed_images.png)
+![DockerHub Images](./screenshots/dockerhub-pushed-images.png)
 
 ---
 
-#Kubernetes Deployment
+# Kubernetes Deployment
 
-The application was deployed on Minikube hosted inside an AWS EC2 instance.
+The application was deployed on Kubernetes using Minikube hosted inside an AWS EC2 instance.
 
 Kubernetes manifests used:
 
-* deployment.yaml
-* service.yaml
+- deployment.yaml
+- service.yaml
 
 ## deployment.yaml
 
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
+
 metadata:
   name: devops-demo-deployment
+
 spec:
   replicas: 2
+
   selector:
     matchLabels:
       app: devops-demo
+
   template:
     metadata:
       labels:
         app: devops-demo
+
     spec:
       containers:
       - name: devops-demo-container
         image: shikhardevops/devops-demo-app:latest
+
         ports:
         - containerPort: 80
 ```
@@ -287,12 +288,16 @@ spec:
 ```yaml
 apiVersion: v1
 kind: Service
+
 metadata:
   name: devops-demo-service
+
 spec:
   type: NodePort
+
   selector:
     app: devops-demo
+
   ports:
     - port: 80
       targetPort: 80
@@ -303,15 +308,13 @@ spec:
 
 # Kubernetes Commands Output
 
-![Kubernetes Commands](./screenshots/k8s_commands.png)
+![Kubernetes Commands](./screenshots/k8s-commands.png)
 
 ---
 
 # Accessing Application Output
 
-Since Minikube was hosted inside an EC2 instance, NodePort networking behaved differently in this setup.
-
-To expose the application externally, Kubernetes port-forwarding was used.
+Since Minikube was hosted inside an EC2 instance, external application access required Kubernetes port-forwarding.
 
 ## Port Forward Command
 
@@ -329,17 +332,17 @@ http://<K8S_PUBLIC_IP>:8081
 
 # Application Output
 
-![Application Output](./screenshots/Application_Output.png)
+![Application Output](./screenshots/application-output.png)
 
 ---
 
 # Monitoring Setup
 
-Monitoring stack used:
+The monitoring stack consisted of:
 
-* Node Exporter
-* Prometheus
-* Grafana
+- Node Exporter
+- Prometheus
+- Grafana
 
 ## Monitoring Flow
 
@@ -355,9 +358,9 @@ Grafana Dashboard
 
 Prometheus scraped metrics from:
 
-* Jenkins Server
-* Kubernetes Server
-* Node Exporter
+- Jenkins Server
+- Kubernetes Server
+- Node Exporter
 
 ---
 
@@ -371,19 +374,19 @@ Prometheus scraped metrics from:
 
 ## Jenkins Server Monitoring
 
-![Grafana Jenkins](./screenshots/grafana-jenkins%20server.png)
+![Grafana Jenkins Server](./screenshots/grafana-jenkins-server.png)
 
 ---
 
 ## Kubernetes Server Monitoring
 
-![Grafana K8s](./screenshots/grafana-k8s-server.png)
+![Grafana Kubernetes Server](./screenshots/grafana-k8s-server.png)
 
 ---
 
 ## Node Exporter Metrics
 
-![Grafana Node Exporter](./screenshots/grafana-node_exporter.png)
+![Grafana Node Exporter](./screenshots/grafana-node-exporter.png)
 
 ---
 
@@ -391,10 +394,10 @@ Prometheus scraped metrics from:
 
 Jenkins email notifications were configured using Gmail SMTP.
 
-Automatic alerts were sent for:
+Notifications were sent automatically for:
 
-* Successful builds
-* Failed builds
+- Successful builds
+- Failed builds
 
 ---
 
@@ -416,26 +419,27 @@ Minikube used internal networking:
 192.168.x.x
 ```
 
-which was not accessible externally from Jenkins.
+which was not directly accessible externally from Jenkins.
 
 ### Solution
 
-Implemented SSH-based deployment where Jenkins remotely executed kubectl commands on the Kubernetes server.
+Implemented SSH-based deployment where Jenkins remotely executed Kubernetes deployment commands on the Kubernetes server.
 
 ---
 
-## 2. Gmail SMTP Connection Issue
+## 2. Gmail SMTP Connection Issues
 
 ### Problem
 
-SMTP SSL configuration caused email connection failures.
+SMTP SSL configuration initially caused email connection failures.
 
 ### Solution
 
-Configured TLS using:
+Configured Gmail SMTP using:
 
-* Port 587
-* Gmail App Password
+- TLS
+- Port 587
+- Gmail App Password
 
 ---
 
@@ -443,7 +447,7 @@ Configured TLS using:
 
 ### Problem
 
-NodePort was not directly accessible due to Minikube networking behavior on EC2.
+NodePort was not directly accessible externally due to Minikube networking behavior on EC2.
 
 ### Solution
 
@@ -453,7 +457,19 @@ Used:
 kubectl port-forward
 ```
 
-for external application access.
+to expose the application externally.
+
+---
+
+## 4. Kubernetes Manifest Version Management
+
+### Problem
+
+Initially deployment.yaml existed only on the Kubernetes server, making deployments difficult to track and version control.
+
+### Solution
+
+Created a dedicated GitHub repository for Kubernetes manifests. Jenkins dynamically updated deployment.yaml with the latest Docker image tag before deployment.
 
 ---
 
@@ -461,14 +477,16 @@ for external application access.
 
 This project successfully demonstrated:
 
-- Infrastructure as Code using Terraform
+- Infrastructure provisioning using Terraform
 - CI/CD automation using Jenkins
 - Docker containerization
 - Kubernetes deployment automation
-- Monitoring using Prometheus & Grafana
-- Email alerting system
+- Automated image versioning
+- Monitoring using Prometheus and Grafana
+- Email notification integration
 - GitHub webhook integration
 - Rolling deployments in Kubernetes
+- Infrastructure reproducibility using bootstrap scripts
 
 ---
 
@@ -478,6 +496,16 @@ Application Source Code Repository:
 
 ```text
 https://github.com/Shikhar-T/devops-demo-app.git
+```
+
+---
+
+# Kubernetes Manifest Repository
+
+Kubernetes Manifest Repository:
+
+```text
+https://github.com/YOUR_GITHUB_USERNAME/k8s-manifests
 ```
 
 ---

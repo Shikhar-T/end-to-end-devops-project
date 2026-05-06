@@ -1,61 +1,137 @@
 pipeline {
     agent any
+
     tools {
         nodejs 'node18'
     }
+
     environment {
         IMAGE_NAME = "shikhardevops/devops-demo-app"
-        IMAGE_TAG = "${BUILD_NUMBER}"
-        K8S_IP = "YOUR_ACTUAL_IP_HERE" // Added this
+        IMAGE_TAG  = "${BUILD_NUMBER}"
+        K8S_SERVER = "18.139.212.156"
     }
+
     stages {
+
         stage('Clean Workspace') {
-            steps { cleanWs() }
-        }
-        stage('Clone Code') {
             steps {
-                git branch: 'main', url: 'https://github.com/Shikhar-T/devops-demo-app.git'
+                cleanWs()
             }
         }
+
+        stage('Clone App Repo') {
+            steps {
+                git branch: 'main',
+                url: 'https://github.com/Shikhar-T/devops-demo-app.git'
+            }
+        }
+
         stage('Build Docker Image') {
             steps {
                 sh 'docker build -t $IMAGE_NAME:$IMAGE_TAG .'
             }
         }
+
         stage('Push Docker Image') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+
                     sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+
                     sh 'docker push $IMAGE_NAME:$IMAGE_TAG'
                 }
             }
         }
+
+        stage('Clone Kubernetes Manifest Repo') {
+            steps {
+
+                dir('k8s-manifests') {
+
+                    git branch: 'main',
+                    url: 'https://github.com/Shikhar-T/k8s-manifests.git'
+                }
+            }
+        }
+
+        stage('Update Deployment YAML') {
+            steps {
+
+                dir('k8s-manifests') {
+
+                    sh """
+                    sed -i 's|image:.*|image: $IMAGE_NAME:$IMAGE_TAG|' deployment.yaml
+                    """
+
+                    sh 'cat deployment.yaml'
+                }
+            }
+        }
+
         stage('Deploy to Kubernetes') {
             steps {
+
                 sh """
-                ssh -o StrictHostKeyChecking=no -i /var/lib/jenkins/my-key.pem ubuntu@18.139.212.156 '
-                    kubectl rollout resume deployment/devops-demo-deployment || true
-                    kubectl set image deployment/devops-demo-deployment devops-demo-container=$IMAGE_NAME:$IMAGE_TAG
+                scp -o StrictHostKeyChecking=no \
+                -i /var/lib/jenkins/my-key.pem \
+                k8s-manifests/deployment.yaml \
+                k8s-manifests/service.yaml \
+                ubuntu@$K8S_SERVER:/home/ubuntu/
+
+                ssh -o StrictHostKeyChecking=no \
+                -i /var/lib/jenkins/my-key.pem \
+                ubuntu@$K8S_SERVER '
+                    kubectl apply -f deployment.yaml
+                    kubectl apply -f service.yaml
                 '
                 """
             }
         }
     }
+
     post {
+
         success {
-            emailext (
+
+            emailext(
                 subject: "SUCCESS: Jenkins Build ${BUILD_NUMBER}",
-                body: "Job: ${JOB_NAME} | Build: ${BUILD_NUMBER} | Image: ${IMAGE_NAME}:${IMAGE_TAG}",
+                body: """
+                Job: ${JOB_NAME}
+
+                Build Number: ${BUILD_NUMBER}
+
+                Docker Image:
+                ${IMAGE_NAME}:${IMAGE_TAG}
+
+                Deployment Successful.
+                """,
                 to: "trenu068@gmail.com"
             )
         }
+
         failure {
-            emailext (
+
+            emailext(
                 subject: "FAILED: Jenkins Build ${BUILD_NUMBER}",
-                body: "Build failed. Check logs at ${BUILD_URL}",
+                body: """
+                Job: ${JOB_NAME}
+
+                Build Failed.
+
+                Check Jenkins Logs:
+                ${BUILD_URL}
+                """,
                 to: "trenu068@gmail.com"
             )
         }
-        always { cleanWs() }
+
+        always {
+            cleanWs()
+        }
     }
 }
