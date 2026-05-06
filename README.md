@@ -65,12 +65,6 @@ Jenkins Sends Build Status Email Notifications
 
 ---
 
-# Architecture
-
-![Architecture](./screenshots/full-project-architecture.png)
-
----
-
 # Tech Stack
 
 
@@ -156,7 +150,7 @@ resource "aws_instance" "jenkins_server" {
 
 # AWS Infrastructure
 
-![AWS EC2 Instances](./screenshots/aws-ec2-instances.png)
+![AWS EC2 Instances](./screenshots/AWS EC2 instances.png)
 
 ---
 
@@ -215,7 +209,7 @@ stage('Update Deployment YAML') {
 
 # Jenkins Pipeline Success
 
-![Pipeline Success](./screenshots/pipeline-success.png)
+![Pipeline Success](./screenshots/pipeline_success.png)
 
 ---
 
@@ -238,7 +232,7 @@ This maintained image version history and enabled rollback capability.
 
 # DockerHub Images
 
-![DockerHub Images](./screenshots/dockerhub-pushed-images.png)
+![DockerHub Images](./screenshots/dockerhub_pushed_images.png)
 
 ---
 
@@ -308,7 +302,7 @@ spec:
 
 # Kubernetes Commands Output
 
-![Kubernetes Commands](./screenshots/k8s-commands.png)
+![Kubernetes Commands](./screenshots/k8s_commands.png)
 
 ---
 
@@ -332,7 +326,7 @@ http://<K8S_PUBLIC_IP>:8081
 
 # Application Output
 
-![Application Output](./screenshots/application-output.png)
+![Application Output](./screenshots/Application_Output.png)
 
 ---
 
@@ -374,7 +368,7 @@ Prometheus scraped metrics from:
 
 ## Jenkins Server Monitoring
 
-![Grafana Jenkins Server](./screenshots/grafana-jenkins-server.png)
+![Grafana Jenkins Server](./screenshots/grafana-jenkins server.png)
 
 ---
 
@@ -386,7 +380,7 @@ Prometheus scraped metrics from:
 
 ## Node Exporter Metrics
 
-![Grafana Node Exporter](./screenshots/grafana-node-exporter.png)
+![Grafana Node Exporter](./screenshots/grafana-node_exporter.png)
 
 ---
 
